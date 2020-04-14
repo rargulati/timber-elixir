@@ -20,7 +20,7 @@ defmodule Timber.Events.LogEntryTest do
                    module_name: nil
                  }
                },
-               dt: "2016-01-21T12:54:56.001234Z",
+               timestamp: "2016-01-21T12:54:56.001234Z",
                event: %{order_placed: %{total: 100}},
                level: :info,
                message: "message"
@@ -32,7 +32,7 @@ defmodule Timber.Events.LogEntryTest do
       vm_pid = get_vm_pid()
 
       assert entry == %Timber.LogEntry{
-               dt: "2016-01-21T12:54:56.001234Z",
+               timestamp: "2016-01-21T12:54:56.001234Z",
                event: nil,
                level: :info,
                message: "message",
@@ -90,7 +90,7 @@ defmodule Timber.Events.LogEntryTest do
 
       assert Map.fetch!(result, "message") == "message"
       assert Map.fetch!(result, "level") == "info"
-      assert Map.fetch!(result, "dt") == "2016-01-21T12:54:56.001234Z"
+      assert Map.fetch!(result, "timestamp") == "2016-01-21T12:54:56.001234Z"
       assert Map.fetch!(result, "type") == %{"test" => "value"}
 
       context = Map.fetch!(result, "context")

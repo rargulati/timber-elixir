@@ -1,5 +1,6 @@
 defmodule Timber.LogEntry do
   @moduledoc false
+
   # The LogEntry module formalizes the structure of every log entry as defined
   # by Timber's log event JSON schema:
   # https://github.com/timberio/log-event-json-schema. The ensures log lines
@@ -18,14 +19,14 @@ defmodule Timber.LogEntry do
   alias Timber.Utils.Timestamp, as: UtilsTimestamp
   alias Timber.LoggerBackends.HTTP, as: LoggerBackend
 
-  defstruct [:dt, :level, :message, :event, context: %{}]
+  defstruct [:timestamp, :level, :message, :event, context: %{}]
 
   #
   # Typespecs
   #
 
   @type t :: %__MODULE__{
-          dt: String.t(),
+          timestamp: String.t(),
           level: Logger.level(),
           message: iodata,
           context: Context.t(),
@@ -33,7 +34,7 @@ defmodule Timber.LogEntry do
         }
 
   @type m :: %__MODULE__{
-          dt: String.t(),
+          timestamp: String.t(),
           level: Logger.level(),
           message: binary,
           context: Context.t(),
@@ -82,7 +83,7 @@ defmodule Timber.LogEntry do
       |> try_to_event()
 
     %__MODULE__{
-      dt: dt_iso8601,
+      timestamp: dt_iso8601,
       level: level,
       message: message,
       context: context,
