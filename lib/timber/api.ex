@@ -39,12 +39,11 @@ defmodule Timber.API do
     request(:post, url, headers: headers, body: body, async: async)
   end
 
-  defp do_send_logs_to_datadog(api_key, nil, content_type, body, opts) do
+  defp do_send_logs_to_datadog(api_key, nil, _content_type, body, opts) do
     async = Keyword.get(opts, :async, false)
     host = Config.http_host()
-    url = "#{host}/frames"
-    auth_token = Base.encode64(api_key)
-    headers = %{"Authorization" => "Basic #{auth_token}", "Content-Type" => content_type}
+    url = "#{host}"
+    headers = %{"DD-API-KEY" => "#{api_key}", "Content-Type" => "application/json"}
     request(:post, url, headers: headers, body: body, async: async)
   end
 

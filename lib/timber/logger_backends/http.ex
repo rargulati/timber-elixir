@@ -305,8 +305,8 @@ defmodule Timber.LoggerBackends.HTTP do
 
     content_type =
       case state.provider do
-        "timber" -> "application/msgpack"
-        _ -> "application/json"
+        "datadog" -> "application/json"
+        _ -> "application/msgpack"
       end
 
     changes = [
@@ -463,7 +463,12 @@ defmodule Timber.LoggerBackends.HTTP do
       transmit_buffer(state, body)
     else
       false ->
-        transmit_buffer(state, state.buffer)
+        body =
+          state.buffer
+          |> Enum.reverse()
+          |> Enum.map(fn entry -> LogEntry.encode_to_binary!(entry, :json) end)
+
+        transmit_buffer(state, body)
 
       {:error, error} ->
         Timber.log(:error, fn ->
