@@ -121,7 +121,7 @@ defmodule Mix.Tasks.Timber.TestThePipes do
     log_map = LogEntry.to_map!(log_entry)
     body = Msgpax.pack!([log_map])
 
-    case API.send_logs(api_key, source_id, "application/msgpack", body) do
+    case API.send_logs("timber", api_key, source_id, "application/msgpack", body) do
       {:ok, status, _headers, _body} when status in 200..299 ->
         puts("Logs successfully sent! View them at https://app.timber.io", :success)
         :ok

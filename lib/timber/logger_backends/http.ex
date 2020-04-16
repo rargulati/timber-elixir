@@ -48,6 +48,8 @@ defmodule Timber.LoggerBackends.HTTP do
   @type t :: %__MODULE__{
           min_level: level | nil,
           api_key: String.t() | nil,
+          provider: String.t() | nil,
+          content_type: String.t() | nil,
           buffer_size: non_neg_integer,
           buffer: buffer,
           flush_interval: non_neg_integer,
@@ -111,7 +113,6 @@ defmodule Timber.LoggerBackends.HTTP do
   # Module vars
   #
 
-  @content_type "application/msgpack"
   @default_max_buffer_size 1000
   @default_flush_interval 1000
   @flush_timeout 5000
@@ -124,6 +125,8 @@ defmodule Timber.LoggerBackends.HTTP do
   # not actually configurable since it's impossible to support clients when we do not understand
   # the response messages in advance
   defstruct api_key: nil,
+            provider: "timber",
+            content_type: "application/msgpack",
             buffer_size: 0,
             buffer: [],
             flush_interval: @default_flush_interval,
@@ -294,13 +297,22 @@ defmodule Timber.LoggerBackends.HTTP do
   @spec configure(Keyword.t(), t) :: {:ok, t}
   defp configure(options, state) do
     api_key = Keyword.get(options, :api_key, Config.api_key())
+    provider = Keyword.get(options, :provider, Config.provider())
     flush_interval = Keyword.get(options, :flush_interval, state.flush_interval)
     max_buffer_size = Keyword.get(options, :max_buffer_size, state.max_buffer_size)
     min_level = Keyword.get(options, :min_level, state.min_level)
     source_id = Keyword.get(options, :source_id, Config.source_id())
 
+    content_type =
+      case state.provider do
+        "datadog" -> "application/json"
+        _ -> "application/msgpack"
+      end
+
     changes = [
       api_key: api_key,
+      provider: provider,
+      content_type: content_type,
       flush_interval: flush_interval,
       max_buffer_size: max_buffer_size,
       min_level: min_level,
@@ -393,7 +405,9 @@ defmodule Timber.LoggerBackends.HTTP do
       "Sending buffer, byte size: #{byte_size}, size: #{state.buffer_size}"
     end)
 
-    case API.send_logs(state.api_key, state.source_id, @content_type, body, async: true) do
+    case API.send_logs(state.provider, state.api_key, state.source_id, state.content_type, body,
+           async: true
+         ) do
       {:ok, ref} ->
         Timber.log(:debug, fn ->
           "Sent log buffer, HTTP request reference: #{inspect(ref)}"
@@ -444,8 +458,16 @@ defmodule Timber.LoggerBackends.HTTP do
   end
 
   defp try_issue_request(%__MODULE__{ref: nil} = state) do
-    case buffer_to_msg_pack(state.buffer) do
-      {:ok, body} ->
+    with true <- state.provider == "timber",
+         {:ok, body} <- buffer_to_msg_pack(state.buffer) do
+      transmit_buffer(state, body)
+    else
+      false ->
+        body =
+          state.buffer
+          |> Enum.reverse()
+          |> Enum.map(fn entry -> LogEntry.encode_to_binary!(entry, :json) end)
+
         transmit_buffer(state, body)
 
       {:error, error} ->

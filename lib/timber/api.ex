@@ -7,9 +7,30 @@ defmodule Timber.API do
   # http://docs.api.timber.io/
 
   # Support the legacy API keys that were source specific and did not require a source ID.
-  def send_logs(api_key, source_id, content_type, body, opts \\ [])
+  def send_logs(provider, api_key, source_id, content_type, body, opts \\ [])
 
-  def send_logs(api_key, nil, content_type, body, opts) do
+  def send_logs(provider, api_key, nil, content_type, body, opts) do
+    case provider do
+      "timber" -> do_send_logs_to_timber(api_key, nil, content_type, body, opts)
+      "datadog" -> do_send_logs_to_datadog(api_key, nil, content_type, body, opts)
+    end
+  end
+
+  def send_logs(provider, api_key, source_id, content_type, body, opts) do
+    case provider == "timber" do
+      true ->
+        async = Keyword.get(opts, :async, false)
+        host = Config.http_host()
+        url = "#{host}/sources/#{source_id}/frames"
+        headers = %{"Authorization" => "Bearer #{api_key}", "Content-Type" => content_type}
+        request(:post, url, headers: headers, body: body, async: async)
+
+      false ->
+        raise "source_id not supported for non-Timber providers"
+    end
+  end
+
+  defp do_send_logs_to_timber(api_key, nil, content_type, body, opts) do
     async = Keyword.get(opts, :async, false)
     host = Config.http_host()
     url = "#{host}/frames"
@@ -18,11 +39,11 @@ defmodule Timber.API do
     request(:post, url, headers: headers, body: body, async: async)
   end
 
-  def send_logs(api_key, source_id, content_type, body, opts) do
+  defp do_send_logs_to_datadog(api_key, nil, _content_type, body, opts) do
     async = Keyword.get(opts, :async, false)
     host = Config.http_host()
-    url = "#{host}/sources/#{source_id}/frames"
-    headers = %{"Authorization" => "Bearer #{api_key}", "Content-Type" => content_type}
+    url = "#{host}"
+    headers = %{"DD-API-KEY" => "#{api_key}", "Content-Type" => "application/json"}
     request(:post, url, headers: headers, body: body, async: async)
   end
 

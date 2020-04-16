@@ -23,11 +23,41 @@ defmodule Timber.Config do
 
   @application :timber
   @default_host "https://logs.timber.io"
+  @valid_providers ~w[timber datadog]
 
   @doc """
-  Your Timber application API key.
+  Your application provider.
 
-  This can be obtained after you create your account & source in https://app.timber.io
+  This can be either timber or datadog.
+
+  ## Example
+
+      config :timber,
+        provider: "datadog"
+
+  You can also use a `{:system, "TIMBER_PROVIDER"}` tuple if you prefer environment variables.
+
+      config :timber,
+        provider: {:system, "TIMBER_PROVIDER"}
+
+  """
+  def provider do
+    case Application.get_env(@application, :provider) do
+      {:system, env_var_name} ->
+        get_env_with_warning(env_var_name)
+
+      provider when provider in @valid_providers and is_binary(provider) ->
+        provider
+
+      _else ->
+        "timber"
+    end
+  end
+
+  @doc """
+  Your application API key.
+
+  For timber, this can be obtained after you create your account & source in https://app.timber.io
 
   ## Example
 
